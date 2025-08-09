@@ -160,19 +160,20 @@ export class Service{
         }
     }
 
-    getFilePreview(fileId) {
+    getFilePreview(fileId, width = 400, height = 300, quality = 85) {
         try {
             if (!fileId) {
                 console.log("No file ID provided for preview");
                 return null;
             }
-            return this.bucket.getFilePreview(
+
+            const url = this.bucket.getFilePreview(
                 conf.appwriteBucketId,
                 fileId,
-                2000, // width
-                2000, // height
+                width,
+                height,
                 'center', // gravity
-                100, // quality
+                quality,
                 0, // border width
                 '', // border color
                 0, // border radius
@@ -180,9 +181,12 @@ export class Service{
                 0, // rotation
                 '', // background
                 'jpg' // output format
-            )
+            );
+
+            console.log(`📸 Generated preview URL: ${url}`);
+            return url;
         } catch (error) {
-            console.log("Error getting file preview:", error);
+            console.log("❌ Error getting file preview:", error);
             return null;
         }
     }
@@ -194,12 +198,16 @@ export class Service{
                 console.log("No file ID provided for view");
                 return null;
             }
-            return this.bucket.getFileView(
+
+            const url = this.bucket.getFileView(
                 conf.appwriteBucketId,
                 fileId
-            )
+            );
+
+            console.log(`👁️ Generated view URL: ${url}`);
+            return url;
         } catch (error) {
-            console.log("Error getting file view:", error);
+            console.log("❌ Error getting file view:", error);
             return null;
         }
     }
