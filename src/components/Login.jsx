@@ -11,18 +11,51 @@ function Login() {
     const dispatch = useDispatch();
     const { register, handleSubmit } = useForm()
     const [error, setError] = useState("")
+    const [loading, setLoading] = useState(false)
 
     const login = async (formData) => {
         setError("")
+        setLoading(true)
+
         try {
             const userData = await authService.login({
                 email: formData.email,
                 password: formData.password
             })
-            if (userData) dispatch(authLogin({userData}));
-            navigate("/")
+
+            if (userData) {
+                dispatch(authLogin({userData}));
+                navigate("/")
+            } else {
+                setError("Login failed. Please check your credentials and try again.")
+            }
         } catch (error) {
-            setError(error.message)
+            console.error("Login error:", error);
+
+            // Handle specific Appwrite error messages
+            let errorMessage = "Login failed. Please try again.";
+
+            if (error.message) {
+                if (error.message.includes("Invalid credentials")) {
+                    errorMessage = "Invalid email or password. Please check your credentials.";
+                } else if (error.message.includes("user_invalid")) {
+                    errorMessage = "Invalid email or password. Please check your credentials.";
+                } else if (error.message.includes("user_blocked")) {
+                    errorMessage = "Your account has been blocked. Please contact support.";
+                } else if (error.message.includes("user_not_found")) {
+                    errorMessage = "No account found with this email address.";
+                } else if (error.message.includes("password_mismatch")) {
+                    errorMessage = "Incorrect password. Please try again.";
+                } else if (error.message.includes("too_many_requests")) {
+                    errorMessage = "Too many login attempts. Please wait a moment and try again.";
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+
+            setError(errorMessage);
+        } finally {
+            setLoading(false);
         }
     }
     
@@ -75,8 +108,9 @@ function Login() {
                         <Button
                             type="submit"
                             className="w-full"
+                            disabled={loading}
                         >
-                            Sign in
+                            {loading ? "Signing in..." : "Sign in"}
                         </Button>
                     </div>
                 </form>

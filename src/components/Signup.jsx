@@ -9,20 +9,54 @@ import {useForm} from 'react-hook-form'
 function Signup() {
     const navigate = useNavigate()
     const [error, setError] = useState("")
+    const [loading, setLoading] = useState(false)
     const dispatch = useDispatch()
     const { register, handleSubmit } = useForm()
 
     const create = async (data) => {
         setError("")
+        setLoading(true)
+
         try {
             const userData = await authService.createAccount(data)
             if (userData) {
-                const userData = await authService.getCurrentUser()
-                if(userData) dispatch(login(userData));
-                navigate("/")
+                const currentUser = await authService.getCurrentUser()
+                if(currentUser) {
+                    dispatch(login({userData: currentUser}));
+                    navigate("/")
+                } else {
+                    setError("Account created but failed to log in. Please try logging in manually.")
+                }
+            } else {
+                setError("Failed to create account. Please try again.")
             }
         } catch (error) {
-            setError(error.message)
+            console.error("Signup error:", error);
+
+            // Handle specific Appwrite error messages
+            let errorMessage = "Failed to create account. Please try again.";
+
+            if (error.message) {
+                if (error.message.includes("user_already_exists")) {
+                    errorMessage = "An account with this email already exists. Please try logging in.";
+                } else if (error.message.includes("password_too_short")) {
+                    errorMessage = "Password is too short. Please use at least 8 characters.";
+                } else if (error.message.includes("password_too_long")) {
+                    errorMessage = "Password is too long. Please use fewer than 256 characters.";
+                } else if (error.message.includes("user_email_invalid")) {
+                    errorMessage = "Please enter a valid email address.";
+                } else if (error.message.includes("user_password_mismatch")) {
+                    errorMessage = "Password confirmation does not match.";
+                } else if (error.message.includes("too_many_requests")) {
+                    errorMessage = "Too many signup attempts. Please wait a moment and try again.";
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+
+            setError(errorMessage);
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -77,8 +111,12 @@ function Signup() {
                                 required: true,
                             })}
                         />
-                        <Button type="submit" className="w-full">
-                            Create Account
+                        <Button
+                            type="submit"
+                            className="w-full"
+                            disabled={loading}
+                        >
+                            {loading ? "Creating Account..." : "Create Account"}
                         </Button>
                      </div>
                 </form>
