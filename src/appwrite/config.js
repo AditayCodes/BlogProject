@@ -17,6 +17,11 @@ export class Service{
     // post methods
     async createPost({ title, slug, content, featuredImage, status, userId }) {
         try {
+            if (!title || !slug || !content || !featuredImage || !userId) {
+                console.log("Missing required fields for post creation");
+                return false;
+            }
+
             return await this.databases.createDocument(
                 conf.appwriteDatabaseId,
                 conf.appwriteCollectionId,
@@ -31,12 +36,18 @@ export class Service{
             )
         } catch (error) {
             console.log("Error creating post:", error);
+            throw error; // Re-throw to handle in the calling function
         }
     }
 
     // update post method
     async updatePost(slug, { title, content, featuredImage, status }) {
         try {
+            if (!slug) {
+                console.log("No slug provided for post update");
+                return false;
+            }
+
             return await this.databases.updateDocument(
                 conf.appwriteDatabaseId,
                 conf.appwriteCollectionId,
@@ -48,10 +59,10 @@ export class Service{
                     status,
                 }
             )
-                
+
         } catch (error) {
             console.log("Error updating post:", error);
-            
+            throw error; // Re-throw to handle in the calling function
         }
     }
 
@@ -102,6 +113,25 @@ export class Service{
 
     async uploadFile(file) {
         try {
+            if (!file) {
+                console.log("No file provided for upload");
+                return false;
+            }
+
+            // Validate file type
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+            if (!allowedTypes.includes(file.type)) {
+                console.log("Invalid file type. Only JPEG, PNG, and GIF are allowed.");
+                return false;
+            }
+
+            // Validate file size (max 5MB)
+            const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+            if (file.size > maxSize) {
+                console.log("File size too large. Maximum size is 5MB.");
+                return false;
+            }
+
             return await this.bucket.createFile(
                 conf.appwriteBucketId,
                 ID.unique(),
@@ -116,6 +146,10 @@ export class Service{
 
     async deleteFile(fileId) {
         try {
+            if (!fileId) {
+                console.log("No file ID provided for deletion");
+                return false;
+            }
             return await this.bucket.deleteFile(
                 conf.appwriteBucketId,
                 fileId
@@ -128,13 +162,62 @@ export class Service{
 
     getFilePreview(fileId) {
         try {
+            if (!fileId) {
+                console.log("No file ID provided for preview");
+                return null;
+            }
             return this.bucket.getFilePreview(
+                conf.appwriteBucketId,
+                fileId,
+                2000, // width
+                2000, // height
+                'center', // gravity
+                100, // quality
+                0, // border width
+                '', // border color
+                0, // border radius
+                1, // opacity
+                0, // rotation
+                '', // background
+                'jpg' // output format
+            )
+        } catch (error) {
+            console.log("Error getting file preview:", error);
+            return null;
+        }
+    }
+
+    // Alternative method to get file view (direct file access)
+    getFileView(fileId) {
+        try {
+            if (!fileId) {
+                console.log("No file ID provided for view");
+                return null;
+            }
+            return this.bucket.getFileView(
                 conf.appwriteBucketId,
                 fileId
             )
         } catch (error) {
-            console.log("Error getting file preview:", error);
-            return false
+            console.log("Error getting file view:", error);
+            return null;
+        }
+    }
+
+    // Method to get file download URL
+    getFileDownload(fileId) {
+        try {
+            if (!fileId) {
+                console.log("No file ID provided for download");
+                return null;
+            }
+            return this.bucket.getFileDownload(
+                conf.appwriteBucketId,
+                fileId
+            )
+        } catch (error) {
+            console.log("Error getting file download:", error);
+            return null;
         }
     }
 

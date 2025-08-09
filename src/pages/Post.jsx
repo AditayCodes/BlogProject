@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import appwriteService from "../appwrite/config";
-import { Button, Container } from "../components";
+import appwriteService from "../appwrite/config.js";
+import { Button, Container, AppwriteImage } from "../components";
 import parse from "html-react-parser";
 import { useSelector } from "react-redux";
 
@@ -36,10 +36,12 @@ export default function Post() {
         <div className="py-4 sm:py-8">
             <Container>
                 <div className="w-full flex justify-center mb-4 relative border rounded-xl p-2">
-                    <img
-                        src={appwriteService.getFilePreview(post.featuredImage)}
+                    <AppwriteImage
+                        fileId={post.featuredImage}
                         alt={post.title}
                         className="rounded-xl w-full h-auto max-h-96 object-cover"
+                        fallbackClassName="rounded-xl w-full h-64 bg-gray-200 flex items-center justify-center"
+                        fallbackText="No Image Available"
                     />
 
                     {isAuthor && (
