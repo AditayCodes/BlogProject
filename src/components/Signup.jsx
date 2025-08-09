@@ -5,9 +5,11 @@ import { login } from '../store/authSlice'
 import {Button, Input, Logo} from './index'
 import {useDispatch} from 'react-redux'
 import {useForm} from 'react-hook-form'
+import { useToast } from '../hooks/useToast'
 
 function Signup() {
     const navigate = useNavigate()
+    const { showSuccess } = useToast();
     const [error, setError] = useState("")
     const [loading, setLoading] = useState(false)
     const dispatch = useDispatch()
@@ -23,7 +25,10 @@ function Signup() {
                 const currentUser = await authService.getCurrentUser()
                 if(currentUser) {
                     dispatch(login({userData: currentUser}));
-                    navigate("/")
+                    showSuccess("Account created successfully! Welcome to the blog!");
+                    setTimeout(() => {
+                        navigate("/");
+                    }, 1000);
                 } else {
                     setError("Account created but failed to log in. Please try logging in manually.")
                 }

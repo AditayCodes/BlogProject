@@ -5,10 +5,12 @@ import { Button, Input, Logo } from './index'
 import { useDispatch } from 'react-redux'
 import authService from '../appwrite/auth'
 import { useForm} from "react-hook-form"
+import { useToast } from '../hooks/useToast'
 
 function Login() {
     const navigate = useNavigate();
     const dispatch = useDispatch();
+    const { showSuccess } = useToast();
     const { register, handleSubmit } = useForm()
     const [error, setError] = useState("")
     const [loading, setLoading] = useState(false)
@@ -25,7 +27,10 @@ function Login() {
 
             if (userData) {
                 dispatch(authLogin({userData}));
-                navigate("/")
+                showSuccess("Welcome back! You have been successfully logged in.");
+                setTimeout(() => {
+                    navigate("/");
+                }, 1000);
             } else {
                 setError("Login failed. Please check your credentials and try again.")
             }

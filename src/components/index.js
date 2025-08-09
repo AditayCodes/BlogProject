@@ -13,6 +13,7 @@ import PostCard from './PostCard';
 import AuthLayout from './AuthLayout';
 import Input from './Input';
 import AppwriteImage from './AppwriteImage';
+import ConfirmModal from './ConfirmModal';
 
 export {
     Header,
@@ -30,4 +31,5 @@ export {
     Input,
     Select,
     AppwriteImage,
+    ConfirmModal,
 };

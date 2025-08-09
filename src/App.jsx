@@ -5,6 +5,7 @@ import authService from "./appwrite/auth"
 import { login, logout } from "./store/authSlice"
 import { Header, Footer } from './components'
 import { Outlet } from 'react-router-dom'
+import { ToastProvider } from './context/ToastContext.jsx'
 
 function App() {
   const [loading, setLoading] = useState(true)
@@ -23,13 +24,15 @@ function App() {
   }, [dispatch])
   
   return !loading ? (
-    <div className='min-h-screen flex flex-col bg-gray-100'>
-      <Header />
-      <main className='flex-1 w-full'>
-        <Outlet />
-      </main>
-      <Footer />
-    </div>
+    <ToastProvider>
+      <div className='min-h-screen flex flex-col bg-gray-100'>
+        <Header />
+        <main className='flex-1 w-full'>
+          <Outlet />
+        </main>
+        <Footer />
+      </div>
+    </ToastProvider>
   ):null
  
   
