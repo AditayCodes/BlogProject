@@ -26,6 +26,10 @@ export default function PostForm({ post }) {
         setError("");
         setLoading(true);
 
+        console.log("📝 Form submission data:", data);
+        console.log("📝 Content length:", data.content ? data.content.length : 0);
+        console.log("📝 Content preview:", data.content ? data.content.substring(0, 100) + "..." : "No content");
+
         try {
             if (post) {
                 // Updating existing post
@@ -50,6 +54,12 @@ export default function PostForm({ post }) {
                 // Creating new post
                 if (!data.image || !data.image[0]) {
                     setError("Please select an image for the post.");
+                    return;
+                }
+
+                // Validate content
+                if (!data.content || data.content.trim() === "" || data.content === "<p></p>") {
+                    setError("Please add some content to your post.");
                     return;
                 }
 

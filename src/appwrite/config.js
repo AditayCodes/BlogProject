@@ -17,12 +17,29 @@ export class Service{
     // post methods
     async createPost({ title, slug, content, featuredImage, status, userId }) {
         try {
+            console.log("📝 Creating post with data:", {
+                title,
+                slug,
+                contentLength: content ? content.length : 0,
+                contentPreview: content ? content.substring(0, 100) + "..." : "No content",
+                featuredImage,
+                status,
+                userId
+            });
+
             if (!title || !slug || !content || !featuredImage || !userId) {
-                console.log("Missing required fields for post creation");
+                console.log("❌ Missing required fields for post creation");
+                console.log("Missing fields:", {
+                    title: !title,
+                    slug: !slug,
+                    content: !content,
+                    featuredImage: !featuredImage,
+                    userId: !userId
+                });
                 return false;
             }
 
-            return await this.databases.createDocument(
+            const result = await this.databases.createDocument(
                 conf.appwriteDatabaseId,
                 conf.appwriteCollectionId,
                 slug,
@@ -33,7 +50,10 @@ export class Service{
                     status,
                     userId,
                 }
-            )
+            );
+
+            console.log("✅ Post created successfully:", result);
+            return result;
         } catch (error) {
             console.log("Error creating post:", error);
             throw error; // Re-throw to handle in the calling function

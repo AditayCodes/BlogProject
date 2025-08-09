@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import appwriteService from "../appwrite/config.js";
 import { Button, Container, AppwriteImage } from "../components";
@@ -17,8 +17,15 @@ export default function Post() {
     useEffect(() => {
         if (slug) {
             appwriteService.getPost(slug).then((post) => {
-                if (post) setPost(post);
-                else navigate("/");
+                if (post) {
+                    console.log("📖 Retrieved post:", post);
+                    console.log("📝 Post content length:", post.content ? post.content.length : 0);
+                    console.log("📝 Post content preview:", post.content ? post.content.substring(0, 100) + "..." : "No content");
+                    setPost(post);
+                } else {
+                    console.log("❌ Post not found");
+                    navigate("/");
+                }
             });
         } else navigate("/");
     }, [slug, navigate]);
@@ -61,8 +68,14 @@ export default function Post() {
                     <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800">{post.title}</h1>
                 </div>
                 <div className="browser-css prose prose-lg max-w-none">
-                    {parse(post.content)}
-                    </div>
+                    {post.content ? (
+                        parse(post.content)
+                    ) : (
+                        <div className="text-gray-500 italic p-4 bg-gray-50 rounded-lg">
+                            <p>No content available for this post.</p>
+                        </div>
+                    )}
+                </div>
             </Container>
         </div>
     ) : null;
