@@ -50,14 +50,23 @@ export default function Post() {
                 setLoading(true);
                 console.log("🔄 Fetching post:", slug);
 
-                const post = await appwriteService.getPost(slug);
+                // Add timeout protection
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Request timeout')), 10000)
+                );
+
+                const post = await Promise.race([
+                    appwriteService.getPost(slug),
+                    timeoutPromise
+                ]);
 
                 if (post) {
                     console.log("📖 Retrieved post:", post);
                     console.log("📝 Post content length:", post.content ? post.content.length : 0);
                     console.log("📝 Post content preview:", post.content ? post.content.substring(0, 100) + "..." : "No content");
                     console.log("👤 Post author ID:", post.userId);
-                    console.log("👤 Post author ID:", post.userId);
+                    console.log("🔍 Post status:", post.status);
+                    console.log("📅 Post created:", post.$createdAt);
                     setPost(post);
                 } else {
                     console.log("❌ Post not found");
@@ -66,7 +75,19 @@ export default function Post() {
                 }
             } catch (error) {
                 console.error("❌ Error fetching post:", error);
-                showToast("Failed to load post", "error");
+
+                let errorMessage = "Failed to load post";
+                if (error.message === 'Request timeout') {
+                    errorMessage = "Request timed out. Please check your connection and try again.";
+                } else if (error.message.includes('network') || error.message.includes('fetch')) {
+                    errorMessage = "Network error. Please check your internet connection.";
+                } else if (error.code === 404) {
+                    errorMessage = "Post not found. It may have been deleted.";
+                } else if (error.code === 401) {
+                    errorMessage = "Access denied. Please log in again.";
+                }
+
+                showToast(errorMessage, "error");
                 navigate("/");
             } finally {
                 setLoading(false);

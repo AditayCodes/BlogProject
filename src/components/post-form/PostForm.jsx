@@ -30,6 +30,23 @@ export default function PostForm({ post }) {
         console.log("📝 Content length:", data.content ? data.content.length : 0);
         console.log("📝 Content preview:", data.content ? data.content.substring(0, 100) + "..." : "No content");
 
+        // Enhanced content validation
+        if (!data.content || data.content.trim() === '' || data.content === '<p></p>' || data.content === '<p><br></p>') {
+            setError("Content is required. Please write some content for your post.");
+            setLoading(false);
+            return;
+        }
+
+        // Check for minimum content length
+        const textContent = data.content.replace(/<[^>]*>/g, '').trim();
+        if (textContent.length < 10) {
+            setError("Content is too short. Please write at least 10 characters.");
+            setLoading(false);
+            return;
+        }
+
+        console.log("✅ Content validation passed. Text content length:", textContent.length);
+
         try {
             if (post) {
                 // Updating existing post

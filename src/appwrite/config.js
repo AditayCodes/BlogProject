@@ -193,16 +193,39 @@ export class Service{
     // get post method
     async getPost(slug) {
         try {
-            return await this.databases.getDocument(
+            if (!slug) {
+                console.log("❌ No slug provided for getPost");
+                return false;
+            }
+
+            console.log("📖 Fetching post with slug:", slug);
+
+            const result = await this.databases.getDocument(
                 conf.appwriteDatabaseId,
                 conf.appwriteCollectionId,
                 slug
-            )
+            );
+
+            console.log("✅ Post retrieved successfully:", {
+                id: result.$id,
+                title: result.title,
+                userId: result.userId,
+                status: result.status,
+                createdAt: result.$createdAt
+            });
+
+            return result;
         } catch (error) {
-            console.log("Error getting posts:", error);
-            return false
+            console.error("❌ Error getting post:", error);
+            console.error("Error details:", {
+                message: error.message,
+                code: error.code,
+                type: error.type,
+                slug: slug
+            });
+            return false;
         }
-    } 
+    }
 
     // get all posts method - ordered by creation date (newest first)
     async getPosts(queries = [Query.equal("status", "active")]) {
