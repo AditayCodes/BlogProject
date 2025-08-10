@@ -1,10 +1,10 @@
-import React from 'react';
 
-function ConfirmModal({ 
-    isOpen, 
-    onClose, 
-    onConfirm, 
-    title = "Confirm Action", 
+
+function ConfirmModal({
+    isOpen,
+    onClose,
+    onConfirm,
+    title = "Confirm Action",
     message = "Are you sure you want to proceed?",
     confirmText = "Confirm",
     cancelText = "Cancel",
