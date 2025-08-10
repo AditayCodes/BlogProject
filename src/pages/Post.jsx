@@ -5,6 +5,8 @@ import { Button, Container, AppwriteImage, ConfirmModal } from "../components";
 import parse from "html-react-parser";
 import { useSelector } from "react-redux";
 import { useToast } from "../hooks/useToast";
+import { useUserName } from "../hooks/useUserName";
+import { verifyPostOwnership, logUserData } from "../utils/userConsistency";
 
 export default function Post() {
     const [post, setPost] = useState(null);
@@ -16,11 +18,26 @@ export default function Post() {
     const { showToast } = useToast();
 
     const userData = useSelector((state) => state.auth.userData);
+    const authStatus = useSelector((state) => state.auth.status);
 
-    const isAuthor = post && userData ? post.userId === userData.$id : false;
+    // Get the author name using the hook
+    const { userName: authorName, loading: authorLoading } = useUserName(post?.userId);
 
-    // Debug author check (keep for troubleshooting)
-    console.log("🔐 Is author:", isAuthor, "| User:", userData?.$id, "| Post author:", post?.userId);
+    // Enhanced author verification using utility function
+    const ownershipVerification = verifyPostOwnership(post, userData);
+    const isAuthor = ownershipVerification.isOwner && authStatus;
+
+    // Log user data for debugging
+    logUserData(userData, 'Post page current user');
+
+    // Additional debugging for post ownership
+    console.log("🔍 Post page ownership check:", {
+        post: post ? { id: post.$id, userId: post.userId } : null,
+        currentUser: userData ? { id: userData.$id, name: userData.name } : null,
+        authStatus,
+        isAuthor,
+        ownershipVerification
+    });
 
     useEffect(() => {
         const fetchPost = async () => {
@@ -39,6 +56,7 @@ export default function Post() {
                     console.log("📖 Retrieved post:", post);
                     console.log("📝 Post content length:", post.content ? post.content.length : 0);
                     console.log("📝 Post content preview:", post.content ? post.content.substring(0, 100) + "..." : "No content");
+                    console.log("👤 Post author ID:", post.userId);
                     console.log("👤 Post author ID:", post.userId);
                     setPost(post);
                 } else {
@@ -72,7 +90,7 @@ export default function Post() {
             console.log("🗑️ Starting deletion process for post:", post.$id);
 
             // Delete the post from database
-            const deleteStatus = await appwriteService.deletePost(post.$id);
+            const deleteStatus = await appwriteService.deletePost(post.$id, userData.$id);
             console.log("🗑️ Delete status from database:", deleteStatus);
 
             if (deleteStatus) {
@@ -198,29 +216,66 @@ export default function Post() {
 
 
 
+
+
                 {/* Post Title */}
                 <div className="w-full mb-6">
                     <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight">
                         {post.title}
                     </h1>
 
-                    {/* Post Meta */}
-                    <div className="flex items-center gap-4 mt-3 text-sm text-gray-600">
-                        <span>By {userData?.name || 'Author'}</span>
-                        <span>•</span>
-                        <span>{new Date(post.$createdAt).toLocaleDateString()}</span>
-                        {post.status && (
-                            <>
-                                <span>•</span>
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                    post.status === 'active'
-                                        ? 'bg-green-100 text-green-800'
-                                        : 'bg-gray-100 text-gray-800'
-                                }`}>
-                                    {post.status}
+                    {/* Enhanced Author Section */}
+                    <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
+                        <div className="flex items-center gap-4">
+                            {/* Author Avatar */}
+                            <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
+                                <span className="text-emerald-600 font-bold text-lg">
+                                    {authorLoading ? 'L' : (authorName || 'U').charAt(0).toUpperCase()}
                                 </span>
-                            </>
-                        )}
+                            </div>
+
+                            {/* Author Info */}
+                            <div className="flex-grow">
+                                <div className="flex items-center gap-3 mb-1">
+                                    <h3 className="text-lg font-semibold text-gray-800">
+                                        {authorLoading ? 'Loading author...' : authorName}
+                                    </h3>
+                                    {isAuthor && (
+                                        <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                                            Your Post
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div className="flex items-center gap-4 text-sm text-gray-600">
+                                    <span>📅 {new Date(post.$createdAt).toLocaleDateString()}</span>
+                                    <span>🕒 {new Date(post.$createdAt).toLocaleTimeString()}</span>
+                                    {post.status && (
+                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                            post.status === 'active'
+                                                ? 'bg-green-100 text-green-800'
+                                                : 'bg-gray-100 text-gray-800'
+                                        }`}>
+                                            {post.status}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Permission Indicator */}
+                            <div className="text-right">
+                                {isAuthor ? (
+                                    <div className="text-sm">
+                                        <div className="text-green-600 font-medium">✓ Can Edit</div>
+                                        <div className="text-green-600 font-medium">✓ Can Delete</div>
+                                    </div>
+                                ) : (
+                                    <div className="text-sm">
+                                        <div className="text-gray-500">👁️ View Only</div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
 

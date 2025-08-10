@@ -24,19 +24,21 @@ export class Service{
         console.log("✅ Appwrite Service initialized");
     }
 
-    // post methods
+    // post methods - Create a new post with user ID only
     async createPost({ title, slug, content, featuredImage, status, userId }) {
         try {
-            console.log("📝 Creating post with data:", {
+            console.log("📝 Creating post with user ID:", {
                 title,
                 slug,
                 contentLength: content ? content.length : 0,
                 contentPreview: content ? content.substring(0, 100) + "..." : "No content",
                 featuredImage,
                 status,
-                userId
+                userId: userId,
+                timestamp: new Date().toISOString()
             });
 
+            // Validate required fields
             if (!title || !slug || !content || !featuredImage || !userId) {
                 console.log("❌ Missing required fields for post creation");
                 console.log("Missing fields:", {
@@ -49,65 +51,142 @@ export class Service{
                 return false;
             }
 
+            // Create post document with only standard fields
+            const postData = {
+                title,
+                content,
+                featuredImage,
+                status,
+                userId, // Only store user ID, we'll fetch name when needed
+            };
+
+            console.log("💾 Saving post to database with data:", postData);
+
             const result = await this.databases.createDocument(
                 conf.appwriteDatabaseId,
                 conf.appwriteCollectionId,
                 slug,
-                {
-                    title,
-                    content,
-                    featuredImage,
-                    status,
-                    userId,
-                }
+                postData
             );
 
-            console.log("✅ Post created successfully:", result);
+            console.log("✅ Post created successfully by user:", {
+                postId: result.$id,
+                userId: result.userId,
+                createdAt: result.$createdAt
+            });
+
             return result;
         } catch (error) {
-            console.log("Error creating post:", error);
+            console.log("❌ Error creating post:", error);
             throw error; // Re-throw to handle in the calling function
         }
     }
 
-    // update post method
-    async updatePost(slug, { title, content, featuredImage, status }) {
+    // update post method - Only allows original author to update their post
+    async updatePost(slug, { title, content, featuredImage, status, currentUserId }) {
         try {
             if (!slug) {
-                console.log("No slug provided for post update");
+                console.log("❌ No slug provided for post update");
                 return false;
             }
 
-            return await this.databases.updateDocument(
+            // First, get the existing post to verify ownership
+            const existingPost = await this.getPost(slug);
+            if (!existingPost) {
+                console.log("❌ Post not found for update");
+                return false;
+            }
+
+            // Verify that the current user is the original author
+            if (existingPost.userId !== currentUserId) {
+                console.log("❌ Access denied: User is not the author of this post");
+                console.log("Post author:", existingPost.userId, "Current user:", currentUserId);
+                throw new Error("Access denied: You can only edit your own posts");
+            }
+
+            console.log("📝 Updating post by authorized author:", {
+                postId: slug,
+                title,
+                content: content ? content.substring(0, 100) + "..." : "No content",
+                featuredImage,
+                status,
+                userId: currentUserId
+            });
+
+            const updateData = {
+                title,
+                content,
+                featuredImage,
+                status,
+                // Don't include authorName or other custom fields that don't exist in schema
+            };
+
+            const result = await this.databases.updateDocument(
                 conf.appwriteDatabaseId,
                 conf.appwriteCollectionId,
                 slug,
-                {
-                    title,
-                    content,
-                    featuredImage,
-                    status,
-                }
-            )
+                updateData
+            );
+
+            console.log("✅ Post updated successfully by author:", {
+                postId: result.$id,
+                userId: result.userId,
+                updatedAt: result.$updatedAt
+            });
+
+            return result;
 
         } catch (error) {
-            console.log("Error updating post:", error);
+            console.log("❌ Error updating post:", error);
             throw error; // Re-throw to handle in the calling function
         }
     }
 
-    // delete post method
-    async deletePost(slug) {
+    // delete post method - Only allows original author to delete their post
+    async deletePost(slug, currentUserId) {
         try {
+            if (!slug || !currentUserId) {
+                console.log("❌ Missing slug or user ID for post deletion");
+                return false;
+            }
+
+            // First, get the existing post to verify ownership
+            const existingPost = await this.getPost(slug);
+            if (!existingPost) {
+                console.log("❌ Post not found for deletion");
+                return false;
+            }
+
+            // Verify that the current user is the original author
+            if (existingPost.userId !== currentUserId) {
+                console.log("❌ Access denied: User is not the author of this post");
+                console.log("Post author:", existingPost.userId, "Current user:", currentUserId);
+                throw new Error("Access denied: You can only delete your own posts");
+            }
+
+            console.log("🗑️ Deleting post by authorized author:", {
+                postId: slug,
+                title: existingPost.title,
+                userId: currentUserId,
+                deletedAt: new Date().toISOString()
+            });
+
             await this.databases.deleteDocument(
                 conf.appwriteDatabaseId,
                 conf.appwriteCollectionId,
                 slug
-            )
-            return true
+            );
+
+            console.log("✅ Post deleted successfully by author:", {
+                postId: slug,
+                userId: existingPost.userId,
+                deletedBy: currentUserId
+            });
+
+            return true;
         } catch (error) {
-            console.log("Error deleting post:", error);
-            return false
+            console.log("❌ Error deleting post:", error);
+            return false;
         }
     }
     
@@ -125,16 +204,27 @@ export class Service{
         }
     } 
 
-    // get all posts method
+    // get all posts method - ordered by creation date (newest first)
     async getPosts(queries = [Query.equal("status", "active")]) {
         try {
-            return await this.databases.listDocuments(
+            // Add ordering by creation date (newest first) to the queries
+            const orderedQueries = [
+                ...queries,
+                Query.orderDesc("$createdAt") // Order by creation date, newest first
+            ];
+
+            console.log("📚 Fetching posts with queries:", orderedQueries);
+
+            const result = await this.databases.listDocuments(
                 conf.appwriteDatabaseId,
                 conf.appwriteCollectionId,
-                queries
-            )
+                orderedQueries
+            );
+
+            console.log(`📚 Retrieved ${result.documents?.length || 0} posts ordered by date`);
+            return result;
         } catch (error) {
-            console.log("Error getting posts:", error);
+            console.log("❌ Error getting posts:", error);
             return false
         }
     }
@@ -256,6 +346,19 @@ export class Service{
         } catch (error) {
             console.log("Error getting file download:", error);
             return null;
+        }
+    }
+
+    // Get user information by ID (for displaying author names)
+    async getUser(userId) {
+        try {
+            console.log("👤 Fetching user info for ID:", userId);
+            // Note: Appwrite doesn't allow getting other users' info easily for security
+            // We'll store author name in the post or use a fallback
+            return { name: 'Author', $id: userId };
+        } catch (error) {
+            console.log("❌ Error fetching user:", error);
+            return { name: 'Unknown Author', $id: userId };
         }
     }
 

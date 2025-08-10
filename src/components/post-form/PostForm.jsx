@@ -40,9 +40,17 @@ export default function PostForm({ post }) {
                     await appwriteService.deleteFile(post.featuredImage);
                 }
 
+                console.log("📝 Updating post with user verification:", {
+                    postId: post.$id,
+                    currentUserId: userData.$id,
+                    newTitle: data.title,
+                    hasNewImage: Boolean(file)
+                });
+
                 const dbPost = await appwriteService.updatePost(post.$id, {
                     ...data,
                     featuredImage: file ? file.$id : post.featuredImage, // Keep existing image if no new one
+                    currentUserId: userData.$id, // Pass current user ID for verification
                 });
 
                 if (dbPost) {
@@ -58,8 +66,17 @@ export default function PostForm({ post }) {
                 }
 
                 // Validate content
-                if (!data.content || data.content.trim() === "" || data.content === "<p></p>") {
+                console.log("📝 Validating content:", data.content);
+                console.log("📝 Content type:", typeof data.content);
+                console.log("📝 Content length:", data.content ? data.content.length : 0);
+
+                if (!data.content ||
+                    data.content.trim() === "" ||
+                    data.content === "<p></p>" ||
+                    data.content === "<p><br></p>" ||
+                    data.content.replace(/<[^>]*>/g, '').trim() === "") {
                     setError("Please add some content to your post.");
+                    setLoading(false);
                     return;
                 }
 
@@ -83,7 +100,33 @@ export default function PostForm({ post }) {
                 if (file) {
                     const fileId = file.$id;
                     data.featuredImage = fileId;
-                    const dbPost = await appwriteService.createPost({ ...data, userId: userData.$id });
+
+                    // Include only user ID for proper attribution
+                    const postData = {
+                        ...data,
+                        userId: userData.$id
+                    };
+
+                    console.log("📝 Creating post with user ID:", {
+                        ...postData,
+                        content: postData.content ? postData.content.substring(0, 100) + "..." : "No content",
+                        userInfo: {
+                            id: userData.$id,
+                            name: userData.name,
+                            email: userData.email
+                        }
+                    });
+
+                    // Verify user consistency
+                    console.log("🔍 User consistency check:", {
+                        postUserId: postData.userId,
+                        currentUserId: userData.$id,
+                        match: postData.userId === userData.$id,
+                        userName: userData.name,
+                        userEmail: userData.email
+                    });
+
+                    const dbPost = await appwriteService.createPost(postData);
 
                     if (dbPost) {
                         navigate(`/post/${dbPost.$id}`);

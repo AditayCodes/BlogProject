@@ -17,10 +17,13 @@ import {Controller } from 'react-hook-form';
                 control={control}
                 render={({ field: { onChange, value } }) => {
                     console.log(`📝 RTE field value:`, value);
+                    console.log(`📝 RTE field value type:`, typeof value);
+                    console.log(`📝 RTE field value length:`, value ? value.length : 0);
+
                     return (
                         <Editor
                             apiKey="n94difusnppky4sh7s9y6jr66l6x36ar8l1tncbk0y15kyy7"
-                            value={value || defaultValue}
+                            value={value || defaultValue || ""}
                             init={{
                                 height: 500,
                                 menubar: true,
@@ -46,18 +49,29 @@ import {Controller } from 'react-hook-form';
                                 toolbar:
                                     "undo redo | blocks | image | bold italic forecolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help",
                                 content_style: "body { font-family:Helvetica,Arial,sans-serif; font-size:14px }",
+                                placeholder: "Start writing your post content here...",
                                 setup: (editor) => {
                                     editor.on('init', () => {
-                                        console.log('📝 TinyMCE editor initialized');
+                                        console.log('📝 TinyMCE editor initialized successfully');
                                         if (value || defaultValue) {
+                                            console.log('📝 Setting initial content:', value || defaultValue);
                                             editor.setContent(value || defaultValue);
                                         }
                                     });
+
+                                    editor.on('change', () => {
+                                        const content = editor.getContent();
+                                        console.log('📝 Editor content changed (via change event):', content);
+                                    });
                                 }
                             }}
-                            onEditorChange={(content) => {
-                                console.log(`📝 Editor content changed:`, content);
+                            onEditorChange={(content, editor) => {
+                                console.log(`📝 Editor content changed (onEditorChange):`, content);
+                                console.log(`📝 Content length:`, content ? content.length : 0);
                                 onChange(content);
+                            }}
+                            onInit={(evt, editor) => {
+                                console.log('📝 TinyMCE onInit called');
                             }}
                         />
                     );
