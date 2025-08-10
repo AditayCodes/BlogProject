@@ -6,47 +6,31 @@ import { useSelector } from 'react-redux'
 function Home() {
     const [posts, setPosts] = useState([])
     const [loading, setLoading] = useState(true)
+    const [initialLoad, setInitialLoad] = useState(true)
     const authStatus = useSelector((state) => state.auth.status)
     const userData = useSelector((state) => state.auth.userData)
+
+    console.log("🏠 Home render - Auth Status:", authStatus, "User:", userData?.$id)
 
     useEffect(() => {
         const fetchPosts = async () => {
             try {
                 setLoading(true)
-                console.log("🏠 Fetching posts for Home page, auth status:", authStatus)
+                console.log("🏠 Fetching posts immediately")
+                console.log("🔐 Auth status:", authStatus)
+                console.log("👤 User data:", userData ? { id: userData.$id, name: userData.name } : "No user")
 
-                // Try to load cached posts first for better UX
-                try {
-                    const cached = localStorage.getItem('cachedPosts')
-                    if (cached) {
-                        const { posts: cachedPosts, timestamp, userId } = JSON.parse(cached)
-                        // Use cache if it's less than 5 minutes old and for the same user
-                        if (Date.now() - timestamp < 300000 && userId === userData?.$id) {
-                            console.log("📦 Using cached posts")
-                            setPosts(cachedPosts)
-                            setLoading(false)
-                            return
-                        }
-                    }
-                } catch (error) {
-                    console.log("⚠️ Failed to load cached posts:", error)
+                // Clear any stale cached data if user changed
+                if (initialLoad) {
+                    localStorage.removeItem('cachedPosts')
+                    setInitialLoad(false)
                 }
 
                 const postsData = await appwriteService.getPosts()
                 if (postsData) {
                     console.log("✅ Posts fetched successfully:", postsData.documents.length)
+                    console.log("📝 Sample post user IDs:", postsData.documents.slice(0, 3).map(p => ({ id: p.$id, userId: p.userId })))
                     setPosts(postsData.documents)
-
-                    // Cache posts in localStorage for better UX
-                    try {
-                        localStorage.setItem('cachedPosts', JSON.stringify({
-                            posts: postsData.documents,
-                            timestamp: Date.now(),
-                            userId: userData?.$id
-                        }))
-                    } catch (error) {
-                        console.log("⚠️ Failed to cache posts:", error)
-                    }
                 } else {
                     console.log("❌ No posts data received")
                     setPosts([])
@@ -60,7 +44,7 @@ function Home() {
         }
 
         fetchPosts()
-    }, [authStatus]) // Refetch when auth status changes
+    }, [authStatus, userData?.$id]) // Refetch when auth status or user changes
   
     if (loading) {
         return (

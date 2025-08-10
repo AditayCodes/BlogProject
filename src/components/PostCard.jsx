@@ -39,14 +39,15 @@ function PostCard({$id, title, featuredImage, content, status, $createdAt, userI
     const ownershipVerification = verifyPostOwnership({ userId }, userData);
     const isOwnPost = ownershipVerification.isOwner;
 
-    // Additional consistency check
-    console.log("🔍 PostCard consistency check:", {
+    // Real-time consistency check
+    console.log("🔍 PostCard real-time check:", {
+        postId: $id,
         postUserId: userId,
         currentUserId: userData?.$id,
         isOwnPost,
         displayAuthorName,
         authorLoading,
-        ownershipVerification
+        authStatus: userData ? 'authenticated' : 'not authenticated'
     });
 
     return (

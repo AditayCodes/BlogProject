@@ -35,12 +35,14 @@ function AllPosts() {
     const authStatus = useSelector((state) => state.auth.status)
     const userData = useSelector((state) => state.auth.userData)
 
+    console.log("📚 AllPosts render - Auth Status:", authStatus, "User:", userData?.$id)
+
     useEffect(() => {
         const fetchPosts = async () => {
             try {
                 setLoading(true)
                 setError("")
-                console.log("🔄 Fetching all posts...")
+                console.log("📚 AllPosts: Fetching all posts immediately")
                 console.log("🔐 Auth status:", authStatus)
                 console.log("👤 User data:", userData ? { id: userData.$id, name: userData.name } : null)
 
@@ -77,7 +79,7 @@ function AllPosts() {
         }
 
         fetchPosts()
-    }, [authStatus]) // Refetch when auth status changes
+    }, [authStatus, userData?.$id]) // Refetch when auth status or user changes
 
     // Filter posts by selected user ID
     useEffect(() => {
