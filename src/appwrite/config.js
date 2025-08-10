@@ -7,11 +7,21 @@ export class Service{
     bucket;
 
     constructor() {
+        console.log("🔧 Initializing Appwrite Service...");
+        console.log("🌐 Appwrite URL:", conf.appwriteUrl);
+        console.log("📋 Project ID:", conf.appwriteProjectId);
+        console.log("🗄️ Database ID:", conf.appwriteDatabaseId);
+        console.log("📁 Collection ID:", conf.appwriteCollectionId);
+        console.log("🪣 Bucket ID:", conf.appwriteBucketId);
+        console.log("🌍 Current domain:", window.location.hostname);
+
         this.client
             .setEndpoint(conf.appwriteUrl)
             .setProject(conf.appwriteProjectId);
         this.databases = new Databases(this.client);
         this.bucket = new Storage(this.client);
+
+        console.log("✅ Appwrite Service initialized");
     }
 
     // post methods

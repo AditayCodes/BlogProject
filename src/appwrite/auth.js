@@ -6,10 +6,17 @@ export class AuthService {
     account;
 
     constructor() {
+        console.log("🔧 Initializing Appwrite Auth Service...");
+        console.log("🌐 Appwrite URL:", conf.appwriteUrl);
+        console.log("📋 Project ID:", conf.appwriteProjectId);
+        console.log("🌍 Current domain:", window.location.hostname);
+
         this.client
             .setEndpoint(conf.appwriteUrl)
             .setProject(conf.appwriteProjectId);
         this.account = new Account(this.client);
+
+        console.log("✅ Appwrite Auth Service initialized");
     }
 
     async createAccount({ email, password, name }) {
@@ -29,9 +36,25 @@ export class AuthService {
     
     async login({ email, password }) {
         try {
-            return await this.account.createEmailPasswordSession(email, password);
+            console.log("🔐 Attempting login for:", email);
+            const session = await this.account.createEmailPasswordSession(email, password);
+            console.log("✅ Login successful:", session);
+            return session;
         } catch (error) {
-            console.log("Error logging in:", error);
+            console.error("❌ Login failed:", error);
+            console.error("Error details:", {
+                message: error.message,
+                code: error.code,
+                type: error.type
+            });
+
+            // Check for common CORS/domain issues
+            if (error.message.includes('CORS') || error.message.includes('network')) {
+                console.error("🚨 CORS/Network Error - Check Appwrite platform settings!");
+                console.error("Current domain:", window.location.hostname);
+                console.error("Make sure this domain is added to Appwrite platforms");
+            }
+
             throw error;
         }
     }
