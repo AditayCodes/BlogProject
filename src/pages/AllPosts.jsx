@@ -2,6 +2,7 @@ import {useState, useEffect} from 'react'
 import { Container, PostCard } from '../components'
 import appwriteService from "../appwrite/config";
 import { useUserName } from '../hooks/useUserName';
+import { useSelector } from 'react-redux';
 
 // Component to display user filter button with real name
 function UserFilterButton({ userId, selectedAuthor, onSelect, posts }) {
@@ -30,12 +31,18 @@ function AllPosts() {
     const [selectedAuthor, setSelectedAuthor] = useState('all')
     const [authors, setAuthors] = useState([])
 
+    // Get authentication state
+    const authStatus = useSelector((state) => state.auth.status)
+    const userData = useSelector((state) => state.auth.userData)
+
     useEffect(() => {
         const fetchPosts = async () => {
             try {
                 setLoading(true)
                 setError("")
                 console.log("🔄 Fetching all posts...")
+                console.log("🔐 Auth status:", authStatus)
+                console.log("👤 User data:", userData ? { id: userData.$id, name: userData.name } : null)
 
                 const response = await appwriteService.getPosts([])
                 console.log("📄 Posts response:", response)
@@ -70,17 +77,19 @@ function AllPosts() {
         }
 
         fetchPosts()
-    }, [])
+    }, [authStatus]) // Refetch when auth status changes
 
     // Filter posts by selected user ID
     useEffect(() => {
+        let filteredResult;
         if (selectedAuthor === 'all') {
+            filteredResult = posts;
             setFilteredPosts(posts)
         } else {
-            const filtered = posts.filter(post => post.userId === selectedAuthor)
-            setFilteredPosts(filtered)
+            filteredResult = posts.filter(post => post.userId === selectedAuthor)
+            setFilteredPosts(filteredResult)
         }
-        console.log(`🔍 Filtered posts for user ID "${selectedAuthor}":`, filteredPosts.length)
+        console.log(`🔍 Filtered posts for user ID "${selectedAuthor}":`, filteredResult.length)
     }, [selectedAuthor, posts])
 
     const handleAuthorFilter = (author) => {
