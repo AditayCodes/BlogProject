@@ -1,79 +1,54 @@
 import { Controller } from 'react-hook-form';
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 function SimpleRTE({ name, control, label, defaultValue = "" }) {
     const [isFocused, setIsFocused] = useState(false);
+    const [fontSize, setFontSize] = useState('14');
+    const [fontFamily, setFontFamily] = useState('Helvetica');
     const editorRef = useRef(null);
 
     console.log(`🖊️ SimpleRTE initialized with defaultValue:`, defaultValue);
 
-    // Helper function to insert text at cursor position
-    const insertTextAtCursor = (text) => {
-        const textarea = editorRef.current;
-        if (!textarea) return;
+    // Set initial content
+    useEffect(() => {
+        if (editorRef.current && defaultValue) {
+            editorRef.current.innerHTML = defaultValue;
+        }
+    }, [defaultValue]);
 
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const currentValue = textarea.value;
+    // Execute formatting commands
+    const execCommand = useCallback((command, value = null) => {
+        document.execCommand(command, false, value);
+        editorRef.current?.focus();
+    }, []);
 
-        const newValue = currentValue.substring(0, start) + text + currentValue.substring(end);
-        textarea.value = newValue;
+    // Handle content changes
+    const handleContentChange = useCallback((onChange) => {
+        return () => {
+            if (editorRef.current) {
+                const content = editorRef.current.innerHTML;
+                console.log(`📝 Content changed:`, content);
+                onChange(content);
+            }
+        };
+    }, []);
 
-        // Trigger onChange
-        const event = new Event('input', { bubbles: true });
-        textarea.dispatchEvent(event);
-
-        // Set cursor position after inserted text
-        setTimeout(() => {
-            textarea.selectionStart = textarea.selectionEnd = start + text.length;
-            textarea.focus();
-        }, 0);
+    // Save cursor position
+    const saveCursorPosition = () => {
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+            return selection.getRangeAt(0);
+        }
+        return null;
     };
 
-    const formatText = (type) => {
-        const textarea = editorRef.current;
-        if (!textarea) return;
-
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const selectedText = textarea.value.substring(start, end);
-
-        let formattedText = '';
-
-        switch (type) {
-            case 'bold':
-                formattedText = `**${selectedText || 'bold text'}**`;
-                break;
-            case 'italic':
-                formattedText = `*${selectedText || 'italic text'}*`;
-                break;
-            case 'heading':
-                formattedText = `# ${selectedText || 'Heading'}`;
-                break;
-            case 'list':
-                formattedText = `- ${selectedText || 'List item'}`;
-                break;
-            case 'link':
-                formattedText = `[${selectedText || 'link text'}](url)`;
-                break;
-            default:
-                return;
+    // Restore cursor position
+    const restoreCursorPosition = (range) => {
+        if (range) {
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
         }
-
-        const currentValue = textarea.value;
-        const newValue = currentValue.substring(0, start) + formattedText + currentValue.substring(end);
-
-        textarea.value = newValue;
-
-        // Trigger onChange
-        const event = new Event('input', { bubbles: true });
-        textarea.dispatchEvent(event);
-
-        // Set cursor position
-        setTimeout(() => {
-            textarea.selectionStart = textarea.selectionEnd = start + formattedText.length;
-            textarea.focus();
-        }, 0);
     };
 
     return (
@@ -92,75 +67,225 @@ function SimpleRTE({ name, control, label, defaultValue = "" }) {
 
                     return (
                         <div className="border border-gray-300 rounded-lg overflow-hidden">
-                            {/* Toolbar */}
-                            <div className="bg-gray-50 border-b border-gray-300 p-2 flex flex-wrap gap-1">
-                                <button
-                                    type="button"
-                                    onClick={() => formatText('bold')}
-                                    className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
-                                    title="Bold (**text**)"
-                                >
-                                    <strong>B</strong>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => formatText('italic')}
-                                    className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
-                                    title="Italic (*text*)"
-                                >
-                                    <em>I</em>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => formatText('heading')}
-                                    className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
-                                    title="Heading (# text)"
-                                >
-                                    H1
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => formatText('list')}
-                                    className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
-                                    title="List (- item)"
-                                >
-                                    • List
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => formatText('link')}
-                                    className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
-                                    title="Link ([text](url))"
-                                >
-                                    🔗 Link
-                                </button>
+                            {/* Enhanced Toolbar */}
+                            <div className="bg-gray-50 border-b border-gray-300 p-3">
+                                {/* First Row - Text Formatting */}
+                                <div className="flex flex-wrap gap-1 mb-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => execCommand('bold')}
+                                        className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100 font-bold"
+                                        title="Bold"
+                                    >
+                                        B
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => execCommand('italic')}
+                                        className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100 italic"
+                                        title="Italic"
+                                    >
+                                        I
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => execCommand('underline')}
+                                        className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100 underline"
+                                        title="Underline"
+                                    >
+                                        U
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => execCommand('strikeThrough')}
+                                        className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100 line-through"
+                                        title="Strikethrough"
+                                    >
+                                        S
+                                    </button>
+
+                                    <div className="w-px bg-gray-300 mx-1"></div>
+
+                                    {/* Font Size */}
+                                    <select
+                                        onChange={(e) => {
+                                            setFontSize(e.target.value);
+                                            execCommand('fontSize', '3');
+                                            // Apply custom font size
+                                            const selection = window.getSelection();
+                                            if (selection.rangeCount > 0) {
+                                                const range = selection.getRangeAt(0);
+                                                if (!range.collapsed) {
+                                                    const span = document.createElement('span');
+                                                    span.style.fontSize = e.target.value + 'px';
+                                                    try {
+                                                        range.surroundContents(span);
+                                                    } catch (e) {
+                                                        span.appendChild(range.extractContents());
+                                                        range.insertNode(span);
+                                                    }
+                                                }
+                                            }
+                                        }}
+                                        value={fontSize}
+                                        className="px-2 py-1 text-sm bg-white border border-gray-300 rounded"
+                                        title="Font Size"
+                                    >
+                                        <option value="12">12px</option>
+                                        <option value="14">14px</option>
+                                        <option value="16">16px</option>
+                                        <option value="18">18px</option>
+                                        <option value="20">20px</option>
+                                        <option value="24">24px</option>
+                                        <option value="28">28px</option>
+                                        <option value="32">32px</option>
+                                    </select>
+
+                                    {/* Font Family */}
+                                    <select
+                                        onChange={(e) => {
+                                            setFontFamily(e.target.value);
+                                            execCommand('fontName', e.target.value);
+                                        }}
+                                        value={fontFamily}
+                                        className="px-2 py-1 text-sm bg-white border border-gray-300 rounded"
+                                        title="Font Family"
+                                    >
+                                        <option value="Arial">Arial</option>
+                                        <option value="Helvetica">Helvetica</option>
+                                        <option value="Times New Roman">Times New Roman</option>
+                                        <option value="Georgia">Georgia</option>
+                                        <option value="Verdana">Verdana</option>
+                                        <option value="Courier New">Courier New</option>
+                                        <option value="Comic Sans MS">Comic Sans MS</option>
+                                    </select>
+                                </div>
+
+                                {/* Second Row - Structure & Alignment */}
+                                <div className="flex flex-wrap gap-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => execCommand('formatBlock', 'h1')}
+                                        className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
+                                        title="Heading 1"
+                                    >
+                                        H1
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => execCommand('formatBlock', 'h2')}
+                                        className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
+                                        title="Heading 2"
+                                    >
+                                        H2
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => execCommand('formatBlock', 'p')}
+                                        className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
+                                        title="Paragraph"
+                                    >
+                                        P
+                                    </button>
+
+                                    <div className="w-px bg-gray-300 mx-1"></div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => execCommand('insertUnorderedList')}
+                                        className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
+                                        title="Bullet List"
+                                    >
+                                        • List
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => execCommand('insertOrderedList')}
+                                        className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
+                                        title="Numbered List"
+                                    >
+                                        1. List
+                                    </button>
+
+                                    <div className="w-px bg-gray-300 mx-1"></div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => execCommand('justifyLeft')}
+                                        className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
+                                        title="Align Left"
+                                    >
+                                        ⬅️
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => execCommand('justifyCenter')}
+                                        className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
+                                        title="Align Center"
+                                    >
+                                        ↔️
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => execCommand('justifyRight')}
+                                        className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
+                                        title="Align Right"
+                                    >
+                                        ➡️
+                                    </button>
+
+                                    <div className="w-px bg-gray-300 mx-1"></div>
+
+                                    {/* Text Colors */}
+                                    <input
+                                        type="color"
+                                        onChange={(e) => execCommand('foreColor', e.target.value)}
+                                        className="w-8 h-8 border border-gray-300 rounded cursor-pointer"
+                                        title="Text Color"
+                                        defaultValue="#000000"
+                                    />
+                                    <input
+                                        type="color"
+                                        onChange={(e) => execCommand('backColor', e.target.value)}
+                                        className="w-8 h-8 border border-gray-300 rounded cursor-pointer"
+                                        title="Background Color"
+                                        defaultValue="#ffffff"
+                                    />
+                                </div>
                             </div>
 
-                            {/* Simple Textarea Editor */}
-                            <textarea
+                            {/* Rich Text Editor */}
+                            <div
                                 ref={editorRef}
-                                className={`w-full min-h-[300px] p-4 resize-y focus:outline-none border-0 ${
+                                contentEditable
+                                className={`min-h-[300px] p-4 focus:outline-none overflow-auto ${
                                     isFocused ? 'ring-2 ring-emerald-500' : ''
                                 }`}
                                 style={{
-                                    fontSize: '14px',
+                                    fontSize: fontSize + 'px',
                                     lineHeight: '1.5',
-                                    fontFamily: 'Helvetica, Arial, sans-serif'
+                                    fontFamily: fontFamily
                                 }}
-                                value={value || defaultValue || ''}
-                                onChange={(e) => {
-                                    const content = e.target.value;
-                                    console.log(`📝 SimpleRTE content changed:`, content);
+                                onKeyDown={(e) => {
+                                    // Handle tab key for indentation
+                                    if (e.key === 'Tab') {
+                                        e.preventDefault();
+                                        execCommand('insertHTML', '&nbsp;&nbsp;&nbsp;&nbsp;');
+                                    }
+                                }}
+                                onInput={(e) => {
+                                    const content = e.target.innerHTML;
+                                    console.log(`📝 Content changed:`, content);
                                     onChange(content);
                                 }}
                                 onFocus={() => setIsFocused(true)}
                                 onBlur={() => setIsFocused(false)}
-                                placeholder="Start writing your post content here... Use the toolbar above for formatting."
+                                suppressContentEditableWarning={true}
                             />
 
                             {/* Help text */}
                             <div className="bg-gray-50 border-t border-gray-300 px-4 py-2 text-xs text-gray-600">
-                                💡 Tip: Select text and use toolbar buttons, or type markdown directly (**bold**, *italic*, # heading, - list)
+                                💡 Select text and use the toolbar to format. You can change font size, family, colors, and alignment.
                             </div>
                         </div>
                     );
