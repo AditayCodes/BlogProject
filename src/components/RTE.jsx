@@ -22,7 +22,6 @@ import {Controller } from 'react-hook-form';
 
                     return (
                         <Editor
-                            apiKey="n94difusnppky4sh7s9y6jr66l6x36ar8l1tncbk0y15kyy7"
                             value={value || defaultValue || ""}
                             init={{
                                 height: 500,
