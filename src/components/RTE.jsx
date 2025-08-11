@@ -68,10 +68,23 @@ import {Controller } from 'react-hook-form';
                             onEditorChange={(content, editor) => {
                                 console.log(`📝 Editor content changed (onEditorChange):`, content);
                                 console.log(`📝 Content length:`, content ? content.length : 0);
-                                onChange(content);
+                                console.log(`📝 Content type:`, typeof content);
+                                try {
+                                    onChange(content);
+                                    console.log(`✅ Content successfully passed to form`);
+                                } catch (error) {
+                                    console.error(`❌ Error updating form content:`, error);
+                                }
                             }}
                             onInit={(evt, editor) => {
                                 console.log('📝 TinyMCE onInit called');
+                                console.log('📝 Editor ready for input');
+                            }}
+                            onLoadContent={(evt, editor) => {
+                                console.log('📝 TinyMCE content loaded');
+                            }}
+                            onError={(error) => {
+                                console.error('❌ TinyMCE Error:', error);
                             }}
                         />
                     );

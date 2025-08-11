@@ -10,10 +10,19 @@ export class AuthService {
         console.log("🌐 Appwrite URL:", conf.appwriteUrl);
         console.log("📋 Project ID:", conf.appwriteProjectId);
         console.log("🌍 Current domain:", window.location.hostname);
+        console.log("🔗 Current origin:", window.location.origin);
 
         this.client
             .setEndpoint(conf.appwriteUrl)
             .setProject(conf.appwriteProjectId);
+
+        // Add domain-specific configuration for Vercel
+        const currentDomain = window.location.hostname;
+        if (currentDomain.includes('vercel.app') || currentDomain.includes('netlify.app')) {
+            console.log("🚀 Detected deployment domain:", currentDomain);
+            console.log("⚠️ Make sure this domain is added to Appwrite platform settings");
+        }
+
         this.account = new Account(this.client);
 
         console.log("✅ Appwrite Auth Service initialized");
@@ -37,6 +46,7 @@ export class AuthService {
     async login({ email, password }) {
         try {
             console.log("🔐 Attempting login for:", email);
+            console.log("🌍 Login from domain:", window.location.origin);
             const session = await this.account.createEmailPasswordSession(email, password);
             console.log("✅ Login successful:", session);
             return session;
@@ -49,10 +59,14 @@ export class AuthService {
             });
 
             // Check for common CORS/domain issues
-            if (error.message.includes('CORS') || error.message.includes('network')) {
+            if (error.message.includes('CORS') || error.message.includes('network') || error.code === 403) {
                 console.error("🚨 CORS/Network Error - Check Appwrite platform settings!");
                 console.error("Current domain:", window.location.hostname);
-                console.error("Make sure this domain is added to Appwrite platforms");
+                console.error("Current origin:", window.location.origin);
+                console.error("📝 SOLUTION: Add this domain to Appwrite Console:");
+                console.error("   1. Go to Appwrite Console > Your Project > Settings > Platforms");
+                console.error("   2. Add Web Platform with hostname:", window.location.hostname);
+                console.error("   3. Or add origin:", window.location.origin);
             }
 
             throw error;

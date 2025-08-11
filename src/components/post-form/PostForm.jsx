@@ -30,22 +30,14 @@ export default function PostForm({ post }) {
         console.log("📝 Content length:", data.content ? data.content.length : 0);
         console.log("📝 Content preview:", data.content ? data.content.substring(0, 100) + "..." : "No content");
 
-        // Enhanced content validation
-        if (!data.content || data.content.trim() === '' || data.content === '<p></p>' || data.content === '<p><br></p>') {
-            setError("Content is required. Please write some content for your post.");
-            setLoading(false);
-            return;
+        // Optional content validation - allow empty content
+        if (data.content) {
+            const textContent = data.content.replace(/<[^>]*>/g, '').trim();
+            console.log("📝 Content provided, text length:", textContent.length);
+        } else {
+            console.log("📝 No content provided - posting without content");
+            data.content = ""; // Ensure content is empty string instead of undefined
         }
-
-        // Check for minimum content length
-        const textContent = data.content.replace(/<[^>]*>/g, '').trim();
-        if (textContent.length < 10) {
-            setError("Content is too short. Please write at least 10 characters.");
-            setLoading(false);
-            return;
-        }
-
-        console.log("✅ Content validation passed. Text content length:", textContent.length);
 
         try {
             if (post) {
@@ -82,19 +74,14 @@ export default function PostForm({ post }) {
                     return;
                 }
 
-                // Validate content
-                console.log("📝 Validating content:", data.content);
+                // Content is now optional
+                console.log("📝 Content provided:", data.content ? "Yes" : "No");
                 console.log("📝 Content type:", typeof data.content);
                 console.log("📝 Content length:", data.content ? data.content.length : 0);
 
-                if (!data.content ||
-                    data.content.trim() === "" ||
-                    data.content === "<p></p>" ||
-                    data.content === "<p><br></p>" ||
-                    data.content.replace(/<[^>]*>/g, '').trim() === "") {
-                    setError("Please add some content to your post.");
-                    setLoading(false);
-                    return;
+                // Ensure content is a string (empty if not provided)
+                if (!data.content) {
+                    data.content = "";
                 }
 
                 // Validate file before upload
@@ -121,6 +108,7 @@ export default function PostForm({ post }) {
                     // Include only user ID for proper attribution
                     const postData = {
                         ...data,
+                        content: data.content || "", // Ensure content is always a string
                         userId: userData.$id
                     };
 
