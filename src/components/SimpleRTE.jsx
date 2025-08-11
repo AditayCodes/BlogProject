@@ -1,13 +1,79 @@
 import { Controller } from 'react-hook-form';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 function SimpleRTE({ name, control, label, defaultValue = "" }) {
     const [isFocused, setIsFocused] = useState(false);
+    const editorRef = useRef(null);
 
     console.log(`🖊️ SimpleRTE initialized with defaultValue:`, defaultValue);
 
-    const formatText = (command, value = null) => {
-        document.execCommand(command, false, value);
+    // Helper function to insert text at cursor position
+    const insertTextAtCursor = (text) => {
+        const textarea = editorRef.current;
+        if (!textarea) return;
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const currentValue = textarea.value;
+
+        const newValue = currentValue.substring(0, start) + text + currentValue.substring(end);
+        textarea.value = newValue;
+
+        // Trigger onChange
+        const event = new Event('input', { bubbles: true });
+        textarea.dispatchEvent(event);
+
+        // Set cursor position after inserted text
+        setTimeout(() => {
+            textarea.selectionStart = textarea.selectionEnd = start + text.length;
+            textarea.focus();
+        }, 0);
+    };
+
+    const formatText = (type) => {
+        const textarea = editorRef.current;
+        if (!textarea) return;
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const selectedText = textarea.value.substring(start, end);
+
+        let formattedText = '';
+
+        switch (type) {
+            case 'bold':
+                formattedText = `**${selectedText || 'bold text'}**`;
+                break;
+            case 'italic':
+                formattedText = `*${selectedText || 'italic text'}*`;
+                break;
+            case 'heading':
+                formattedText = `# ${selectedText || 'Heading'}`;
+                break;
+            case 'list':
+                formattedText = `- ${selectedText || 'List item'}`;
+                break;
+            case 'link':
+                formattedText = `[${selectedText || 'link text'}](url)`;
+                break;
+            default:
+                return;
+        }
+
+        const currentValue = textarea.value;
+        const newValue = currentValue.substring(0, start) + formattedText + currentValue.substring(end);
+
+        textarea.value = newValue;
+
+        // Trigger onChange
+        const event = new Event('input', { bubbles: true });
+        textarea.dispatchEvent(event);
+
+        // Set cursor position
+        setTimeout(() => {
+            textarea.selectionStart = textarea.selectionEnd = start + formattedText.length;
+            textarea.focus();
+        }, 0);
     };
 
     return (
@@ -32,7 +98,7 @@ function SimpleRTE({ name, control, label, defaultValue = "" }) {
                                     type="button"
                                     onClick={() => formatText('bold')}
                                     className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
-                                    title="Bold"
+                                    title="Bold (**text**)"
                                 >
                                     <strong>B</strong>
                                 </button>
@@ -40,66 +106,40 @@ function SimpleRTE({ name, control, label, defaultValue = "" }) {
                                     type="button"
                                     onClick={() => formatText('italic')}
                                     className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
-                                    title="Italic"
+                                    title="Italic (*text*)"
                                 >
                                     <em>I</em>
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => formatText('underline')}
+                                    onClick={() => formatText('heading')}
                                     className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
-                                    title="Underline"
+                                    title="Heading (# text)"
                                 >
-                                    <u>U</u>
+                                    H1
                                 </button>
-                                <div className="w-px bg-gray-300 mx-1"></div>
                                 <button
                                     type="button"
-                                    onClick={() => formatText('insertUnorderedList')}
+                                    onClick={() => formatText('list')}
                                     className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
-                                    title="Bullet List"
+                                    title="List (- item)"
                                 >
                                     • List
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => formatText('insertOrderedList')}
+                                    onClick={() => formatText('link')}
                                     className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
-                                    title="Numbered List"
+                                    title="Link ([text](url))"
                                 >
-                                    1. List
-                                </button>
-                                <div className="w-px bg-gray-300 mx-1"></div>
-                                <button
-                                    type="button"
-                                    onClick={() => formatText('justifyLeft')}
-                                    className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
-                                    title="Align Left"
-                                >
-                                    ←
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => formatText('justifyCenter')}
-                                    className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
-                                    title="Align Center"
-                                >
-                                    ↔
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => formatText('justifyRight')}
-                                    className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
-                                    title="Align Right"
-                                >
-                                    →
+                                    🔗 Link
                                 </button>
                             </div>
 
-                            {/* Editor */}
-                            <div
-                                contentEditable
-                                className={`min-h-[300px] p-4 focus:outline-none ${
+                            {/* Simple Textarea Editor */}
+                            <textarea
+                                ref={editorRef}
+                                className={`w-full min-h-[300px] p-4 resize-y focus:outline-none border-0 ${
                                     isFocused ? 'ring-2 ring-emerald-500' : ''
                                 }`}
                                 style={{
@@ -107,25 +147,21 @@ function SimpleRTE({ name, control, label, defaultValue = "" }) {
                                     lineHeight: '1.5',
                                     fontFamily: 'Helvetica, Arial, sans-serif'
                                 }}
-                                dangerouslySetInnerHTML={{ __html: value || defaultValue || '' }}
-                                onInput={(e) => {
-                                    const content = e.target.innerHTML;
+                                value={value || defaultValue || ''}
+                                onChange={(e) => {
+                                    const content = e.target.value;
                                     console.log(`📝 SimpleRTE content changed:`, content);
                                     onChange(content);
                                 }}
                                 onFocus={() => setIsFocused(true)}
                                 onBlur={() => setIsFocused(false)}
-                                data-placeholder="Start writing your post content here..."
+                                placeholder="Start writing your post content here... Use the toolbar above for formatting."
                             />
-                            
-                            {/* Placeholder styling */}
-                            <style jsx>{`
-                                [contenteditable]:empty:before {
-                                    content: attr(data-placeholder);
-                                    color: #9CA3AF;
-                                    font-style: italic;
-                                }
-                            `}</style>
+
+                            {/* Help text */}
+                            <div className="bg-gray-50 border-t border-gray-300 px-4 py-2 text-xs text-gray-600">
+                                💡 Tip: Select text and use toolbar buttons, or type markdown directly (**bold**, *italic*, # heading, - list)
+                            </div>
                         </div>
                     );
                 }}
